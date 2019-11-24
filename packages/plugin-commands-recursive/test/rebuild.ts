@@ -1,11 +1,9 @@
+import { recursive } from '@pnpm/plugin-commands-recursive'
 import { preparePackages } from '@pnpm/prepare'
-import tape = require('tape')
-import promisifyTape from 'tape-promise'
-import { execPnpm } from '../utils'
+import test = require('tape')
+import { DEFAULT_OPTS } from './utils'
 
-const test = promisifyTape(tape)
-
-test('pnpm recursive rebuild', async (t: tape.Test) => {
+test('pnpm recursive rebuild', async (t) => {
   const projects = preparePackages(t, [
     {
       name: 'project-1',
@@ -25,22 +23,30 @@ test('pnpm recursive rebuild', async (t: tape.Test) => {
     },
   ])
 
-  await execPnpm('recursive', 'install', '--ignore-scripts')
+  await recursive.handler(['install'], {
+    ...DEFAULT_OPTS,
+    dir: process.cwd(),
+    ignoreScripts: true,
+  })
 
   await projects['project-1'].hasNot('pre-and-postinstall-scripts-example/generated-by-preinstall.js')
   await projects['project-1'].hasNot('pre-and-postinstall-scripts-example/generated-by-postinstall.js')
   await projects['project-2'].hasNot('pre-and-postinstall-scripts-example/generated-by-preinstall.js')
   await projects['project-2'].hasNot('pre-and-postinstall-scripts-example/generated-by-postinstall.js')
 
-  await execPnpm('recursive', 'rebuild')
+  await recursive.handler(['rebuild'], {
+    ...DEFAULT_OPTS,
+    dir: process.cwd(),
+  })
 
   await projects['project-1'].has('pre-and-postinstall-scripts-example/generated-by-preinstall.js')
   await projects['project-1'].has('pre-and-postinstall-scripts-example/generated-by-postinstall.js')
   await projects['project-2'].has('pre-and-postinstall-scripts-example/generated-by-preinstall.js')
   await projects['project-2'].has('pre-and-postinstall-scripts-example/generated-by-postinstall.js')
+  t.end()
 })
 
-test('`pnpm recursive rebuild` specific dependencies', async (t: tape.Test) => {
+test('`pnpm recursive rebuild` specific dependencies', async (t) => {
   const projects = preparePackages(t, [
     {
       name: 'project-1',
@@ -66,14 +72,21 @@ test('`pnpm recursive rebuild` specific dependencies', async (t: tape.Test) => {
     },
   ])
 
-  await execPnpm('recursive', 'install', '--ignore-scripts')
+  await recursive.handler(['install'], {
+    ...DEFAULT_OPTS,
+    dir: process.cwd(),
+    ignoreScripts: true,
+  })
 
   await projects['project-1'].hasNot('pre-and-postinstall-scripts-example/generated-by-preinstall.js')
   await projects['project-1'].hasNot('pre-and-postinstall-scripts-example/generated-by-postinstall.js')
   await projects['project-2'].hasNot('pre-and-postinstall-scripts-example/generated-by-preinstall.js')
   await projects['project-2'].hasNot('pre-and-postinstall-scripts-example/generated-by-postinstall.js')
 
-  await execPnpm('recursive', 'rebuild', 'install-scripts-example-for-pnpm')
+  await recursive.handler(['rebuild', 'install-scripts-example-for-pnpm'], {
+    ...DEFAULT_OPTS,
+    dir: process.cwd(),
+  })
 
   await projects['project-1'].hasNot('pre-and-postinstall-scripts-example/generated-by-preinstall.js')
   await projects['project-1'].hasNot('pre-and-postinstall-scripts-example/generated-by-postinstall.js')
@@ -95,4 +108,5 @@ test('`pnpm recursive rebuild` specific dependencies', async (t: tape.Test) => {
     const generatedByPostinstall = projects['project-2'].requireModule('install-scripts-example-for-pnpm/generated-by-postinstall')
     t.ok(typeof generatedByPostinstall === 'function', 'generatedByPostinstall() is available')
   }
+  t.end()
 })
